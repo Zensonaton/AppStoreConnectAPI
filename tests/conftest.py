@@ -6,8 +6,26 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.oid import NameOID
+
+from appstoreconnectapi.client import AppStoreConnectClient
+
+
+@pytest.fixture
+def private_key_pem() -> bytes:
+    key = ec.generate_private_key(ec.SECP256R1())
+
+    return key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+
+@pytest.fixture
+def client(private_key_pem) -> AppStoreConnectClient:
+    return AppStoreConnectClient("KEY123", "ISSUER123", private_key_pem)
 
 
 @pytest.fixture

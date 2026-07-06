@@ -103,11 +103,19 @@ class AppStoreConnectClient:
 			params=params,
 			headers=self._api_http_headers_(),
 		)
-		response.raise_for_status()
-
 		json = response.json()
 		if not isinstance(json, dict):
 			raise ValueError("Expected JSON response to be a dict")
+
+		errors = json.get("errors")
+		if errors:
+			error = errors[0]
+
+			# TODO(Zensonaton): Implement custom Exception type
+			raise Exception(
+				f"{error['code']}: {error['title']}\n"
+				f"{error['detail']}"
+			)
 
 		return json
 
