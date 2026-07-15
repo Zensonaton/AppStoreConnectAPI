@@ -30,7 +30,11 @@ def resolve_app(client: AppStoreConnectClient, bundle_id: str) -> App:
 	Returns the App Store application associated with given bundle_id.
 	"""
 
-	apps = client.apps.retrieve(filter_bundle_id=bundle_id, limit=1)
+	apps = client.apps.retrieve(
+		filter_bundle_id=bundle_id,
+		fields_apps="",
+		limit=1
+	)
 	if not apps:
 		sys.exit(f"No App found for bundle ID {bundle_id}")
 

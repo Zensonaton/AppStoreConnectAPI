@@ -4,6 +4,8 @@ from ._base import BaseAPI
 from .models import App
 
 
+FIELDS_APPS_VALUES = ["accessibilityUrl", "name", "bundleId", "sku", "primaryLocale", "isOrEverWasMadeForKids", "subscriptionStatusUrl", "subscriptionStatusUrlVersion", "subscriptionStatusUrlForSandbox", "subscriptionStatusUrlVersionForSandbox", "contentRightsDeclaration", "streamlinedPurchasingEnabled", "accessibilityDeclarations", "appEncryptionDeclarations", "appStoreIcon", "ciProduct", "betaTesters", "betaGroups", "appStoreVersions", "appTags", "preReleaseVersions", "betaAppLocalizations", "builds", "betaLicenseAgreement", "betaAppReviewDetail", "appInfos", "appClips", "appPricePoints", "endUserLicenseAgreement", "appPriceSchedule", "appAvailabilityV2", "inAppPurchases", "subscriptionGroups", "gameCenterEnabledVersions", "perfPowerMetrics", "appCustomProductPages", "inAppPurchasesV2", "promotedPurchases", "appEvents", "reviewSubmissions", "subscriptionGracePeriod", "customerReviews", "customerReviewSummarizations", "gameCenterDetail", "appStoreVersionExperimentsV2", "alternativeDistributionKey", "analyticsReportRequests", "marketplaceSearchDetail", "buildUploads", "backgroundAssets", "betaFeedbackScreenshotSubmissions", "betaFeedbackCrashSubmissions", "searchKeywords", "webhooks", "androidToIosAppMappingDetails"]
+"""List of allowed field values of included apps."""
 SORT_APP_VALUES = ["name", "-name", "bundleId", "-bundleId", "sku", "-sku"]
 """List of allowed values for sorting Apps."""
 INCLUDE_APP_VALUES = ["appEncryptionDeclarations", "appStoreIcon", "ciProduct", "betaGroups", "appStoreVersions", "preReleaseVersions", "betaAppLocalizations", "builds", "betaLicenseAgreement", "betaAppReviewDetail", "appInfos", "appClips", "endUserLicenseAgreement", "inAppPurchases", "subscriptionGroups", "gameCenterEnabledVersions", "appCustomProductPages", "inAppPurchasesV2", "promotedPurchases", "appEvents", "reviewSubmissions", "subscriptionGracePeriod", "gameCenterDetail", "appStoreVersionExperimentsV2", "androidToIosAppMappingDetails"]
@@ -19,6 +21,7 @@ class AppsAPI(BaseAPI):
 	def retrieve(
 		self,
 		sort: str | None = None,
+		fields_apps: list[str] | str = [],
 		filter_id: str | None = None,
 		filter_bundle_id: str | None = None,
 		filter_name: str | None = None,
@@ -44,6 +47,8 @@ class AppsAPI(BaseAPI):
 		}
 		if sort:
 			params["sort"] = self._validated_values_(sort, SORT_APP_VALUES, "sort")
+		if fields_apps:
+			params["fields[apps]"] = self._validated_values_(include, FIELDS_APPS_VALUES, "fields[apps]")
 		if filter_id:
 			params["filter[id]"] = filter_id
 		if filter_bundle_id:
