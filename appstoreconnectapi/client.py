@@ -7,8 +7,11 @@ import requests
 
 from appstoreconnectapi.consts import BASE_API_URL
 
+from .api.app_store_versions import AppStoreVersionsAPI
+from .api.apps import AppsAPI
 from .api.bundle_ids import BundleIDsAPI
 from .api.certificates import CertificatesAPI
+from .api.pre_release_versions import PreReleaseVersionsAPI
 from .api.profiles import ProfilesAPI
 
 
@@ -31,10 +34,16 @@ class AppStoreConnectClient:
 	http_client: requests.Session
 	"""HTTP client session for making API requests"""
 
+	apps: AppsAPI
+	"""Apps API namespace"""
+	app_store_versions: AppStoreVersionsAPI
+	"""App Store versions API namespace"""
 	bundle_ids: BundleIDsAPI
 	"""Bundle IDs API namespace"""
 	certificates: CertificatesAPI
 	"""Certificates API namespace"""
+	pre_release_versions: PreReleaseVersionsAPI
+	"""Pre-release (TestFlight) versions API namespace"""
 	profiles: ProfilesAPI
 	"""Profiles API namespace"""
 
@@ -53,8 +62,11 @@ class AppStoreConnectClient:
 		self.base_url = BASE_API_URL
 		self.http_client = requests.Session()
 
+		self.apps = AppsAPI(self)
+		self.app_store_versions = AppStoreVersionsAPI(self)
 		self.bundle_ids = BundleIDsAPI(self)
 		self.certificates = CertificatesAPI(self)
+		self.pre_release_versions = PreReleaseVersionsAPI(self)
 		self.profiles = ProfilesAPI(self)
 
 	@staticmethod
@@ -128,7 +140,7 @@ class AppStoreConnectClient:
 		:return: dict representing the JSON response
 		"""
 
-		return self._api_request_("GET", path, params)["data"]
+		return self._api_request_("GET", path, params)
 
 	def _api_post_(self, path: str, params: dict = {}, data: dict = {}) -> dict:
 		"""
@@ -140,7 +152,7 @@ class AppStoreConnectClient:
 		:return: dict representing the JSON response
 		"""
 
-		return self._api_request_("POST", path, params, data)["data"]
+		return self._api_request_("POST", path, params, data)
 
 	def _api_delete_(self, path: str, params: dict = {}) -> dict:
 		"""
