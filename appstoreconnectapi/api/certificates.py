@@ -59,9 +59,7 @@ class CertificatesAPI(BaseAPI):
 
 			params["filter[passTypeIds]"] = filter_pass_type_ids
 
-		return [
-			Certificate(**i) for i in self._client._api_get_("/certificates", params)
-		]
+		return Certificate.list_from_response(self._client._api_get_("/certificates", params))
 
 	def delete(self, id: str) -> None:
 		"""

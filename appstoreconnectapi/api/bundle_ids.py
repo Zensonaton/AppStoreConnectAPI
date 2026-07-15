@@ -54,6 +54,4 @@ class BundleIDsAPI(BaseAPI):
 		if filter_seed_id:
 			params["filter[seedId]"] = filter_seed_id
 
-		return [
-			BundleID(**i) for i in self._client._api_get_("/bundleIds", params)
-		]
+		return BundleID.list_from_response(self._client._api_get_("/bundleIds", params))

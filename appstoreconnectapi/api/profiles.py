@@ -57,7 +57,7 @@ class ProfilesAPI(BaseAPI):
 			}
 		)
 
-		return Profile(**response)
+		return Profile.from_response(response)
 
 	def retrieve(
 		self,
@@ -103,9 +103,7 @@ class ProfilesAPI(BaseAPI):
 
 			params["filter[profileType]"] = ",".join(filter_profile_type)
 
-		return [
-			Profile(**i) for i in self._client._api_get_("/profiles", params=params)
-		]
+		return Profile.list_from_response(self._client._api_get_("/profiles", params=params))
 
 	def delete(self, id: str) -> None:
 		"""
