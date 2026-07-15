@@ -2,6 +2,8 @@
 
 import base64
 from datetime import datetime, timedelta, timezone
+from typing import Callable
+from unittest.mock import MagicMock
 
 import pytest
 from cryptography import x509
@@ -26,6 +28,31 @@ def private_key_pem() -> bytes:
 @pytest.fixture
 def client(private_key_pem) -> AppStoreConnectClient:
     return AppStoreConnectClient("KEY123", "ISSUER123", private_key_pem)
+
+
+@pytest.fixture
+def mock_response() -> Callable[[dict | list], MagicMock]:
+    def _mock_response(json_data: dict | list) -> MagicMock:
+        response = MagicMock()
+        response.json.return_value = json_data
+
+        return response
+
+    return _mock_response
+
+
+@pytest.fixture
+def mock_api(client, mock_response) -> Callable[[dict], MagicMock]:
+    """
+    Makes the client answer its next request with the given JSON response, returning the mocked request.
+    """
+
+    def _mock_api(json_data: dict) -> MagicMock:
+        client.http_client.request = MagicMock(return_value=mock_response(json_data))
+
+        return client.http_client.request
+
+    return _mock_api
 
 
 @pytest.fixture
@@ -96,4 +123,143 @@ def profile_payload() -> dict:
             "createdDate": "2024-01-01T00:00:00.000+00:00",
             "expirationDate": "2030-01-01T00:00:00.000+00:00",
         },
+    }
+
+
+@pytest.fixture
+def app_payload() -> dict:
+    return {
+        "id": "APP123",
+        "type": "apps",
+        "attributes": {
+            "name": "Example App",
+            "bundleId": "com.example.app",
+            "sku": "EXAMPLE",
+            "primaryLocale": "en-US",
+            "isOrEverWasMadeForKids": False,
+            "contentRightsDeclaration": "DOES_NOT_USE_THIRD_PARTY_CONTENT",
+            "streamlinedPurchasingEnabled": True,
+        },
+    }
+
+
+@pytest.fixture
+def apps_response(app_payload) -> dict:
+    return {"data": [app_payload]}
+
+
+@pytest.fixture
+def app_store_versions_response() -> dict:
+    """
+    Response of the App Store versions endpoint, requested with `include=["build"]`.
+    """
+
+    return {
+        "data": [
+            {
+                "id": "VERSION1",
+                "type": "appStoreVersions",
+                "attributes": {
+                    "versionString": "1.4.0",
+                    "platform": "IOS",
+                    "appVersionState": "READY_FOR_DISTRIBUTION",
+                    "releaseType": "MANUAL",
+                    "downloadable": True,
+                    "createdDate": "2024-06-01T00:00:00.000+00:00",
+                },
+                "relationships": {
+                    "build": {"data": {"id": "BUILD1", "type": "builds"}},
+                },
+            },
+            {
+                "id": "VERSION2",
+                "type": "appStoreVersions",
+                "attributes": {
+                    "versionString": "1.3.0",
+                    "platform": "IOS",
+                    "appVersionState": "REPLACED_WITH_NEW_VERSION",
+                    "createdDate": "2024-05-01T00:00:00.000+00:00",
+                },
+                "relationships": {
+                    "build": {"data": {"id": "BUILD2", "type": "builds"}},
+                },
+            },
+        ],
+        "included": [
+            {
+                "id": "BUILD1",
+                "type": "builds",
+                "attributes": {"version": "42", "processingState": "VALID"},
+            },
+            {
+                "id": "BUILD2",
+                "type": "builds",
+                "attributes": {"version": "37", "processingState": "VALID"},
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def pre_release_versions_response(app_payload) -> dict:
+    """
+    Response of the pre-release versions endpoint, requested with `include=["builds", "app"]`.
+    """
+
+    return {
+        "data": [
+            {
+                "id": "PRERELEASE1",
+                "type": "preReleaseVersions",
+                "attributes": {"version": "1.5.0", "platform": "IOS"},
+                "relationships": {
+                    "builds": {
+                        "data": [
+                            {"id": "BUILD3", "type": "builds"},
+                            {"id": "BUILD4", "type": "builds"},
+                        ]
+                    },
+                    "app": {"data": {"id": "APP123", "type": "apps"}},
+                },
+            },
+            {
+                "id": "PRERELEASE2",
+                "type": "preReleaseVersions",
+                "attributes": {"version": "1.4.0", "platform": "IOS"},
+                "relationships": {
+                    "builds": {"data": [{"id": "BUILD1", "type": "builds"}]},
+                    "app": {"data": None},
+                },
+            },
+        ],
+        "included": [
+            {
+                "id": "BUILD3",
+                "type": "builds",
+                "attributes": {
+                    "version": "56",
+                    "uploadedDate": "2024-06-10T00:00:00.000+00:00",
+                    "expired": False,
+                    "minOsVersion": "16.0",
+                    "processingState": "VALID",
+                    "buildAudienceType": "APP_STORE_ELIGIBLE",
+                },
+            },
+            {
+                "id": "BUILD4",
+                "type": "builds",
+                "attributes": {"version": "55", "expired": True, "processingState": "VALID"},
+            },
+            {
+                "id": "BUILD1",
+                "type": "builds",
+                "attributes": {"version": "42", "processingState": "VALID"},
+            },
+            app_payload,
+            {
+                "id": "UNKNOWN1",
+                "type": "unknownResources",
+                "attributes": {"whatever": True},
+            },
+        ],
     }

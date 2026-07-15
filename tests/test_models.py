@@ -5,7 +5,16 @@ from datetime import datetime, timezone
 
 from cryptography import x509
 
-from appstoreconnectapi.api.models import BundleID, Certificate, Profile
+from appstoreconnectapi.api.models import (
+    App,
+    AppStoreVersion,
+    Build,
+    BundleID,
+    Certificate,
+    PreReleaseVersion,
+    Profile,
+    _Resource,
+)
 
 
 class TestBundleID:
@@ -122,6 +131,167 @@ class TestProfile:
         profile = Profile.model_validate(profile_payload)
 
         assert profile.contents_as_bytes == b"mobileprovision-bytes"
+
+
+class TestApp:
+    def test_flattens_attributes(self, app_payload):
+        app = App.model_validate(app_payload)
+
+        assert app.id == "APP123"
+        assert app.name == "Example App"
+        assert app.bundle_id == "com.example.app"
+        assert app.sku == "EXAMPLE"
+        assert app.primary_locale == "en-US"
+        assert app.is_or_ever_was_made_for_kids is False
+        assert app.content_rights_declaration == "DOES_NOT_USE_THIRD_PARTY_CONTENT"
+        assert app.streamlined_purchasing_enabled is True
+
+    def test_optional_attributes_default_to_none(self, app_payload):
+        del app_payload["attributes"]["sku"]
+        del app_payload["attributes"]["primaryLocale"]
+        app = App.model_validate(app_payload)
+
+        assert app.sku is None
+        assert app.primary_locale is None
+
+
+class TestAppStoreVersion:
+    def test_flattens_attributes(self, app_store_versions_response):
+        version = AppStoreVersion.model_validate(app_store_versions_response["data"][0])
+
+        assert version.id == "VERSION1"
+        assert version.version_string == "1.4.0"
+        assert version.platform == "IOS"
+        assert version.app_version_state == "READY_FOR_DISTRIBUTION"
+        assert version.release_type == "MANUAL"
+        assert version.downloadable is True
+        assert isinstance(version.created_date, datetime)
+        assert version.created_date.year == 2024
+
+    def test_build_property_returns_included_build(self, app_store_versions_response):
+        version = AppStoreVersion.list_from_response(app_store_versions_response)[0]
+
+        assert isinstance(version.build, Build)
+        assert version.build.version == "42"
+
+    def test_build_property_is_none_without_includes(self, app_store_versions_response):
+        version = AppStoreVersion.model_validate(app_store_versions_response["data"][0])
+
+        assert version.build is None
+
+
+class TestBuild:
+    def test_flattens_attributes(self, pre_release_versions_response):
+        build = Build.model_validate(pre_release_versions_response["included"][0])
+
+        assert build.id == "BUILD3"
+        assert build.version == "56"
+        assert build.expired is False
+        assert build.min_os_version == "16.0"
+        assert build.processing_state == "VALID"
+        assert build.build_audience_type == "APP_STORE_ELIGIBLE"
+        assert isinstance(build.uploaded_date, datetime)
+
+
+class TestPreReleaseVersion:
+    def test_flattens_attributes(self, pre_release_versions_response):
+        version = PreReleaseVersion.model_validate(pre_release_versions_response["data"][0])
+
+        assert version.id == "PRERELEASE1"
+        assert version.version == "1.5.0"
+        assert version.platform == "IOS"
+
+    def test_builds_property_returns_included_builds(self, pre_release_versions_response):
+        version = PreReleaseVersion.list_from_response(pre_release_versions_response)[0]
+
+        assert [build.version for build in version.builds] == ["56", "55"]
+
+    def test_builds_property_is_empty_without_includes(self, pre_release_versions_response):
+        version = PreReleaseVersion.model_validate(pre_release_versions_response["data"][0])
+
+        assert version.builds == []
+
+
+class TestIncludes:
+    def test_defaults_to_empty_list(self, bundle_id_payload):
+        bundle = BundleID.model_validate(bundle_id_payload)
+
+        assert bundle.includes == []
+
+    def test_from_response_resolves_includes(self, pre_release_versions_response):
+        response = {
+            "data": pre_release_versions_response["data"][0],
+            "included": pre_release_versions_response["included"],
+        }
+        version = PreReleaseVersion.from_response(response)
+
+        assert version.id == "PRERELEASE1"
+        assert [include.id for include in version.includes] == ["BUILD3", "BUILD4", "APP123"]
+
+    def test_list_from_response_resolves_includes(self, pre_release_versions_response):
+        versions = PreReleaseVersion.list_from_response(pre_release_versions_response)
+
+        assert [include.id for include in versions[0].includes] == ["BUILD3", "BUILD4", "APP123"]
+        assert [include.id for include in versions[1].includes] == ["BUILD1"]
+
+    def test_resolves_only_own_relationships(self, pre_release_versions_response):
+        first, second = PreReleaseVersion.list_from_response(pre_release_versions_response)
+
+        assert [build.version for build in first.builds] == ["56", "55"]
+        assert [build.version for build in second.builds] == ["42"]
+
+    def test_includes_are_parsed_into_their_models(self, pre_release_versions_response):
+        version = PreReleaseVersion.list_from_response(pre_release_versions_response)[0]
+
+        assert [type(include) for include in version.includes] == [Build, Build, App]
+
+    def test_get_includes_filters_by_model(self, pre_release_versions_response):
+        version = PreReleaseVersion.list_from_response(pre_release_versions_response)[0]
+
+        apps = version.get_includes(App)
+
+        assert len(apps) == 1
+        assert apps[0].bundle_id == "com.example.app"
+
+    def test_get_includes_returns_empty_list_for_absent_model(self, pre_release_versions_response):
+        version = PreReleaseVersion.list_from_response(pre_release_versions_response)[1]
+
+        assert version.get_includes(App) == []
+
+    def test_empty_relationship_is_skipped(self, pre_release_versions_response):
+        version = PreReleaseVersion.list_from_response(pre_release_versions_response)[1]
+
+        assert version.get_includes(App) == []
+        assert len(version.includes) == 1
+
+    def test_unknown_included_types_are_skipped(self, pre_release_versions_response):
+        versions = PreReleaseVersion.list_from_response(pre_release_versions_response)
+        included_ids = [include.id for version in versions for include in version.includes]
+
+        assert "UNKNOWN1" not in included_ids
+
+    def test_response_without_included_section(self, apps_response):
+        apps = App.list_from_response(apps_response)
+
+        assert apps[0].includes == []
+
+    def test_includes_are_dumped_as_their_own_model(self, pre_release_versions_response):
+        version = PreReleaseVersion.list_from_response(pre_release_versions_response)[0]
+
+        dumped = version.model_dump()
+
+        assert dumped["version"] == "1.5.0"
+        assert dumped["includes"][0]["version"] == "56"
+        assert dumped["includes"][2]["bundle_id"] == "com.example.app"
+
+    def test_every_model_is_registered_by_its_resource_type(self):
+        assert _Resource.resource_models["apps"] is App
+        assert _Resource.resource_models["appStoreVersions"] is AppStoreVersion
+        assert _Resource.resource_models["builds"] is Build
+        assert _Resource.resource_models["bundleIds"] is BundleID
+        assert _Resource.resource_models["certificates"] is Certificate
+        assert _Resource.resource_models["preReleaseVersions"] is PreReleaseVersion
+        assert _Resource.resource_models["profiles"] is Profile
 
 
 def test_days_until_expiration_handles_naive_now():
