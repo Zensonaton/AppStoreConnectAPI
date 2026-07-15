@@ -70,7 +70,7 @@ def print_testflight_version(client: AppStoreConnectClient, app: App) -> None:
 	"""
 
 	versions = client.pre_release_versions.retrieve(
-		app.id,
+		filter_app=app.id,
 		filter_platform="IOS",
 		include="builds",
 		limit=1,

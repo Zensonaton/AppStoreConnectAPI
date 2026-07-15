@@ -24,7 +24,7 @@ class PreReleaseVersionsAPI(BaseAPI):
 
 	def retrieve(
 		self,
-		app_id: str,
+		filter_app: str | None = None,
 		sort: str | None = None,
 		filter_version: str | None = None,
 		filter_platform: str | None = None,
@@ -37,9 +37,9 @@ class PreReleaseVersionsAPI(BaseAPI):
 		limit_builds: int | None = None
 	) -> list[PreReleaseVersion]:
 		"""
-		Retrieve a list of pre-release (TestFlight) versions of an App.
+		Retrieve a list of pre-release (TestFlight) versions.
 
-		:param app_id: The resource ID of the App to retrieve the pre-release versions of
+		:param filter_app: The resource ID of the App to filter the pre-release versions by
 		:param sort: The attribute to sort the pre-release versions by (e.g. "-version")
 		:param filter_version: The version string (e.g. "1.0.0") to filter the pre-release versions by
 		:param filter_platform: The platform (e.g. "IOS") to filter the pre-release versions by
@@ -56,6 +56,8 @@ class PreReleaseVersionsAPI(BaseAPI):
 		params: dict = {
 			"limit": limit
 		}
+		if filter_app:
+			params["filter[app]"] = filter_app
 		if sort:
 			params["sort"] = self._validated_values_(sort, SORT_PRE_RELEASE_VERSION_VALUES, "sort")
 		if filter_version:
@@ -76,5 +78,5 @@ class PreReleaseVersionsAPI(BaseAPI):
 			params["limit[builds]"] = limit_builds
 
 		return PreReleaseVersion.list_from_response(
-			self._client._api_get_(f"/apps/{app_id}/preReleaseVersions", params)
+			self._client._api_get_("/preReleaseVersions", params)
 		)

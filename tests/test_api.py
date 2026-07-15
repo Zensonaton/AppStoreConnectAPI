@@ -99,7 +99,7 @@ class TestPreReleaseVersionsAPI:
     def test_retrieves_versions_with_their_builds(self, client, mock_api, pre_release_versions_response):
         mock_api(pre_release_versions_response)
 
-        versions = client.pre_release_versions.retrieve("APP123", include="builds")
+        versions = client.pre_release_versions.retrieve(filter_app="APP123", include="builds")
 
         assert [version.version for version in versions] == ["1.5.0", "1.4.0"]
         assert isinstance(versions[0], PreReleaseVersion)
@@ -110,7 +110,7 @@ class TestPreReleaseVersionsAPI:
         request = mock_api(pre_release_versions_response)
 
         client.pre_release_versions.retrieve(
-            "APP123",
+            filter_app="APP123",
             sort="-version",
             filter_platform="IOS",
             filter_builds_processing_state="VALID",
@@ -122,9 +122,10 @@ class TestPreReleaseVersionsAPI:
 
         args, kwargs = request.call_args
         assert args[0] == "GET"
-        assert args[1] == f"{client.base_url}/apps/APP123/preReleaseVersions"
+        assert args[1] == f"{client.base_url}/preReleaseVersions"
         assert kwargs["params"] == {
             "limit": 1,
+            "filter[app]": "APP123",
             "sort": "-version",
             "filter[platform]": "IOS",
             "filter[builds.processingState]": "VALID",
@@ -133,11 +134,20 @@ class TestPreReleaseVersionsAPI:
             "limit[builds]": 50,
         }
 
+    def test_omits_app_filter_by_default(self, client, mock_api, pre_release_versions_response):
+        request = mock_api(pre_release_versions_response)
+
+        client.pre_release_versions.retrieve()
+
+        args, kwargs = request.call_args
+        assert args[1] == f"{client.base_url}/preReleaseVersions"
+        assert "filter[app]" not in kwargs["params"]
+
     @pytest.mark.parametrize("expired, expected", [(True, "true"), (False, "false")])
     def test_sends_builds_expired_filter_as_string(self, client, mock_api, pre_release_versions_response, expired, expected):
         request = mock_api(pre_release_versions_response)
 
-        client.pre_release_versions.retrieve("APP123", filter_builds_expired=expired)
+        client.pre_release_versions.retrieve(filter_app="APP123", filter_builds_expired=expired)
 
         _, kwargs = request.call_args
         assert kwargs["params"]["filter[builds.expired]"] == expected
@@ -145,7 +155,7 @@ class TestPreReleaseVersionsAPI:
     def test_omits_builds_expired_filter_by_default(self, client, mock_api, pre_release_versions_response):
         request = mock_api(pre_release_versions_response)
 
-        client.pre_release_versions.retrieve("APP123")
+        client.pre_release_versions.retrieve(filter_app="APP123")
 
         _, kwargs = request.call_args
         assert "filter[builds.expired]" not in kwargs["params"]
@@ -154,7 +164,7 @@ class TestPreReleaseVersionsAPI:
         mock_api(pre_release_versions_response)
 
         with pytest.raises(ValueError, match="Invalid sort value: -createdDate"):
-            client.pre_release_versions.retrieve("APP123", sort="-createdDate")
+            client.pre_release_versions.retrieve(filter_app="APP123", sort="-createdDate")
 
 
 class TestExistingAPIsParseResponses:
