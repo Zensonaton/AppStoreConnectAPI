@@ -65,7 +65,7 @@ class ProfilesAPI(BaseAPI):
 		filter_id: str | None = None,
 		filter_name: str | None = None,
 		filter_profile_state: str | None = None,
-		filter_profile_type: list | str = [],
+		filter_profile_type: list[str] | str = [],
 		every: bool = False
 	) -> list[Profile]:
 		"""
@@ -74,34 +74,19 @@ class ProfilesAPI(BaseAPI):
 		:return: List of Profile objects
 		"""
 
-		if isinstance(filter_profile_type, str):
-			filter_profile_type = [filter_profile_type]
-
 		params: dict = {
 			"limit": 200
 		}
 		if sort:
-			if sort not in SORT_PROFILE_VALUES:
-				raise ValueError(f"Invalid sort value: {sort}. Allowed values are: {SORT_PROFILE_VALUES}")
-
-			params["sort"] = sort
+			params["sort"] = self._validated_values_(sort, SORT_PROFILE_VALUES, "sort")
 		if filter_id:
 			params["filter[id]"] = filter_id
 		if filter_name:
 			params["filter[name]"] = filter_name
 		if filter_profile_state:
-			if filter_profile_state not in FILTER_PROFILE_STATES:
-				raise ValueError(f"Invalid profile state: {filter_profile_state}. Allowed values are: {FILTER_PROFILE_STATES}")
-
-			params["filter[profileState]"] = filter_profile_state
+			params["filter[profileState]"] = self._validated_values_(filter_profile_state, FILTER_PROFILE_STATES, "profile state")
 		if filter_profile_type:
-			for profile_type in filter_profile_type:
-				if profile_type in FILTER_PROFILE_TYPES:
-					continue
-
-				raise ValueError(f"Invalid profile type: {profile_type}. Allowed values are: {FILTER_PROFILE_TYPES}")
-
-			params["filter[profileType]"] = ",".join(filter_profile_type)
+			params["filter[profileType]"] = self._validated_values_(filter_profile_type, FILTER_PROFILE_TYPES, "profile type")
 
 		return Profile.list_from_response(self._client._api_get_("/profiles", params=params))
 

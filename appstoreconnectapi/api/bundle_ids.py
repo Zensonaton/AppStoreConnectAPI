@@ -36,10 +36,7 @@ class BundleIDsAPI(BaseAPI):
 			"limit": 200
 		}
 		if sort:
-			if sort not in SORT_BUNDLE_ID_VALUES:
-				raise ValueError(f"Invalid sort value: {sort}. Allowed values are: {SORT_BUNDLE_ID_VALUES}")
-
-			params["sort"] = sort
+			params["sort"] = self._validated_values_(sort, SORT_BUNDLE_ID_VALUES, "sort")
 		if filter_id:
 			params["filter[id]"] = filter_id
 		if filter_identifier:
@@ -47,10 +44,7 @@ class BundleIDsAPI(BaseAPI):
 		if filter_name:
 			params["filter[name]"] = filter_name
 		if filter_platform:
-			if filter_platform not in FILTER_BUNDLE_ID_PLATFORMS:
-				raise ValueError(f"Invalid platform: {filter_platform}. Allowed values are: {FILTER_BUNDLE_ID_PLATFORMS}")
-
-			params["filter[platform]"] = filter_platform
+			params["filter[platform]"] = self._validated_values_(filter_platform, FILTER_BUNDLE_ID_PLATFORMS, "platform")
 		if filter_seed_id:
 			params["filter[seedId]"] = filter_seed_id
 

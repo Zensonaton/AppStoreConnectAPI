@@ -38,26 +38,17 @@ class CertificatesAPI(BaseAPI):
 			"limit": 200
 		}
 		if sort:
-			if sort not in SORT_CERTIFICATE_VALUES:
-				raise ValueError(f"Invalid sort value: {sort}. Allowed values are: {SORT_CERTIFICATE_VALUES}")
-
-			params["sort"] = sort
+			params["sort"] = self._validated_values_(sort, SORT_CERTIFICATE_VALUES, "sort")
 		if filter_id:
 			params["filter[id]"] = filter_id
 		if filter_serial_number:
 			params["filter[serialNumber]"] = filter_serial_number
 		if filter_certificate_type:
-			if filter_certificate_type not in FILTER_CERTIFICATE_TYPES:
-				raise ValueError(f"Invalid certificate type: {filter_certificate_type}. Allowed values are: {FILTER_CERTIFICATE_TYPES}")
-
-			params["filter[certificateType]"] = filter_certificate_type
+			params["filter[certificateType]"] = self._validated_values_(filter_certificate_type, FILTER_CERTIFICATE_TYPES, "certificate type")
 		if filter_display_name:
 			params["filter[displayName]"] = filter_display_name
 		if filter_pass_type_ids:
-			if filter_pass_type_ids not in FILTER_PASS_TYPE_IDS:
-				raise ValueError(f"Invalid pass type IDs filter: {filter_pass_type_ids}. Allowed values are: {FILTER_PASS_TYPE_IDS}")
-
-			params["filter[passTypeIds]"] = filter_pass_type_ids
+			params["filter[passTypeIds]"] = self._validated_values_(filter_pass_type_ids, FILTER_PASS_TYPE_IDS, "pass type IDs filter")
 
 		return Certificate.list_from_response(self._client._api_get_("/certificates", params))
 

@@ -190,3 +190,41 @@ class TestExistingAPIsParseResponses:
 
         assert profile.id == "PROF123"
         assert profile.name == "AppStore Profile"
+
+
+class TestExistingAPIsShareValidation:
+    """
+    The pre-existing namespaces validate their query values through the shared `_validated_values_` helper.
+    """
+
+    def test_bundle_ids_reject_invalid_platform(self, client, mock_api, bundle_id_payload):
+        mock_api({"data": [bundle_id_payload]})
+
+        with pytest.raises(ValueError, match="Invalid platform value: ANDROID"):
+            client.bundle_ids.retrieve(filter_platform="ANDROID")
+
+    def test_certificates_reject_invalid_type(self, client, mock_api, certificate_payload):
+        mock_api({"data": [certificate_payload]})
+
+        with pytest.raises(ValueError, match="Invalid certificate type value: FOO"):
+            client.certificates.retrieve(filter_certificate_type="FOO")
+
+    def test_profiles_reject_invalid_state(self, client, mock_api, profile_payload):
+        mock_api({"data": [profile_payload]})
+
+        with pytest.raises(ValueError, match="Invalid profile state value: PENDING"):
+            client.profiles.retrieve(filter_profile_state="PENDING")
+
+    def test_profiles_validate_each_profile_type(self, client, mock_api, profile_payload):
+        mock_api({"data": [profile_payload]})
+
+        with pytest.raises(ValueError, match="Invalid profile type value: MAC_APP_ADHOC"):
+            client.profiles.retrieve(filter_profile_type=["IOS_APP_STORE", "MAC_APP_ADHOC"])
+
+    def test_profiles_join_multiple_profile_types(self, client, mock_api, profile_payload):
+        request = mock_api({"data": [profile_payload]})
+
+        client.profiles.retrieve(filter_profile_type=["IOS_APP_STORE", "MAC_APP_STORE"])
+
+        _, kwargs = request.call_args
+        assert kwargs["params"]["filter[profileType]"] == "IOS_APP_STORE,MAC_APP_STORE"
