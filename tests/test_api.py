@@ -186,6 +186,32 @@ class TestExistingAPIsParseResponses:
 
         assert [certificate.id for certificate in certificates] == ["CERT123"]
 
+    def test_certificates_create(self, client, mock_api, certificate_payload):
+        request = mock_api({"data": certificate_payload})
+
+        certificate = client.certificates.create("IOS_DISTRIBUTION", "CSR-CONTENT")
+
+        assert certificate.id == "CERT123"
+
+        args, kwargs = request.call_args
+        assert args[0] == "POST"
+        assert args[1] == f"{client.base_url}/certificates"
+        assert kwargs["json"] == {
+            "data": {
+                "type": "certificates",
+                "attributes": {
+                    "certificateType": "IOS_DISTRIBUTION",
+                    "csrContent": "CSR-CONTENT",
+                },
+            }
+        }
+
+    def test_certificates_create_rejects_invalid_type(self, client, mock_api, certificate_payload):
+        mock_api({"data": certificate_payload})
+
+        with pytest.raises(ValueError, match="Invalid certificate type value: FOO"):
+            client.certificates.create("FOO", "CSR-CONTENT")
+
     def test_profiles_retrieve(self, client, mock_api, profile_payload):
         mock_api({"data": [profile_payload]})
 

@@ -18,6 +18,30 @@ class CertificatesAPI(BaseAPI):
 	:reference: https://developer.apple.com/documentation/appstoreconnectapi/certificate
 	"""
 
+	def create(self, certificate_type: str, csr_content: str) -> Certificate:
+		"""
+		Requests the creation of a new Certificate from a Certificate Signing Request (CSR).
+
+		:param certificate_type: The type of the Certificate to create (e.g. "IOS_DISTRIBUTION")
+		:param csr_content: The contents of the Certificate Signing Request (CSR), PEM-encoded
+		:return: The created Certificate object
+		"""
+
+		response = self._client._api_post_(
+			"/certificates",
+			data={
+				"data": {
+					"type": "certificates",
+					"attributes": {
+						"certificateType": self._validated_values_(certificate_type, FILTER_CERTIFICATE_TYPES, "certificate type"),
+						"csrContent": csr_content,
+					}
+				}
+			}
+		)
+
+		return Certificate.from_response(response)
+
 	def retrieve(
 		self,
 		sort: str | None = None,
